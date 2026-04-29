@@ -1054,8 +1054,22 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     return await this.sock.sendMessage(request.chatId, message, options);
   }
 
-  sendImage(request: MessageImageRequest) {
-    throw new AvailableInPlusVersion();
+  @Activity()
+  async sendImage(request: MessageImageRequest) {
+    const chatId = toJID(this.ensureSuffix(request.chatId));
+    const buffer = await this.fileToBuffer(request.file);
+    const message: any = {
+      image: buffer,
+    };
+    if (request.caption) {
+      message.caption = request.caption;
+    }
+    if (request.mentions) {
+      message.mentions = request.mentions.map(toJID);
+    }
+    const options = await this.getMessageOptions(request);
+    const result = await this.sock.sendMessage(chatId, message, options);
+    return this.toWAMessage(result);
   }
 
   sendFile(request: MessageFileRequest) {

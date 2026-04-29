@@ -1127,8 +1127,34 @@ export class WhatsappSessionGoWSCore extends WhatsappSession {
     throw new NotImplementedByEngineError();
   }
 
-  sendImage(request: MessageImageRequest) {
-    throw new AvailableInPlusVersion();
+  @Activity()
+  async sendImage(request: MessageImageRequest) {
+    const jid = normalizeJid(toJID(this.ensureSuffix(request.chatId)));
+    const buffer = await this.fileToBuffer(request.file);
+    const mimetype = request.file.mimetype || 'image/jpeg';
+    const filename = request.file.filename || 'image.jpg';
+
+    const media = new messages.Media({
+      content: Uint8Array.from(buffer),
+      type: messages.MediaType.IMAGE,
+      mimetype: mimetype,
+      filename: filename
+    });
+
+    const message = new messages.MessageRequest({
+      jid: jid,
+      session: this.session,
+      text: request.caption,
+      media: media,
+      replyTo: getMessageIdFromSerialized(request.reply_to as any),
+      mentions: request.mentions?.map((mention) =>
+        normalizeJid(toJID(mention)),
+      ),
+    });
+
+    const response = await promisify(this.client.SendMessage)(message);
+    const data = response.toObject();
+    return this.messageResponse(jid, data);
   }
 
   sendFile(request: MessageFileRequest) {

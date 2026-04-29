@@ -623,9 +623,31 @@ export class WhatsappSessionWPPCore extends WhatsappSession {
     return this.toWAMessage(sent);
   }
 
-  public sendImage(request: MessageImageRequest) {
-    void request;
-    throw new AvailableInPlusVersion();
+  @Activity()
+  public async sendImage(request: MessageImageRequest) {
+    const chatId = this.ensureSuffix(request.chatId);
+    const buffer = await this.fileToBuffer(request.file);
+    const mimetype = request.file.mimetype || 'image/jpeg';
+    const base64 = buffer.toString('base64');
+    const media = `data:${mimetype};base64,${base64}`;
+    const filename = request.file.filename || 'image.jpg';
+    
+    const quotedMessageId = this.getReplyToMessageId(request as any);
+    const options: any = {
+      quotedMsg: quotedMessageId,
+    };
+    if (request.mentions) {
+      options.mentionedList = request.mentions.map((id) => this.ensureSuffix(id));
+    }
+    
+    const sent = await this.wpp!.sendImage(
+      chatId,
+      media,
+      filename,
+      request.caption || '',
+      options,
+    );
+    return this.toWAMessage(sent);
   }
 
   public sendFile(request: MessageFileRequest) {
@@ -1872,12 +1894,7 @@ export class WhatsappSessionWPPCore extends WhatsappSession {
     };
   }
 
-  protected async fileToBuffer(file: BinaryFile | RemoteFile): Promise<Buffer> {
-    if ('url' in file) {
-      return this.fetch(file.url);
-    }
-    return Buffer.from(file.data, 'base64');
-  }
+
 
   private toGroupParticipants(participants: any[]): GroupParticipant[] {
     const result: GroupParticipant[] = [];

@@ -438,6 +438,14 @@ export abstract class WhatsappSession {
    * START - Methods for API
    */
 
+  protected async fileToBuffer(file: BinaryFile | RemoteFile): Promise<Buffer> {
+    if ('url' in file) {
+      return fetchBuffer(file.url);
+    } else {
+      return Buffer.from(file.data, 'base64');
+    }
+  }
+
   public browserTrace(query: BrowserTraceQuery): Promise<string> {
     throw new NotImplementedByEngineError();
   }

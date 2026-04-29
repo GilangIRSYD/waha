@@ -844,8 +844,25 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
     );
   }
 
-  sendImage(request: MessageImageRequest) {
-    throw new AvailableInPlusVersion();
+  @Activity()
+  async sendImage(request: MessageImageRequest) {
+    const chatId = this.ensureSuffix(request.chatId);
+    const buffer = await this.fileToBuffer(request.file);
+    const mimetype = request.file.mimetype || 'image/jpeg';
+    const filename = request.file.filename || 'image.jpg';
+    
+    const media = new MessageMedia(mimetype, buffer.toString('base64'), filename);
+
+    const options: any = this.getMessageOptions(request);
+    if (request.caption) {
+      options.caption = request.caption;
+    }
+    if (request.mentions) {
+        options.mentions = request.mentions.map((id) => this.ensureSuffix(id));
+    }
+
+    const sent = await this.whatsapp.sendMessage(chatId, media, options);
+    return this.toWAMessage(sent);
   }
 
   sendFile(request: MessageFileRequest) {
